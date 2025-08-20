@@ -1,15 +1,5 @@
 #!/usr/bin/env python3
-
-""" lógica del: 
-estado_superpuesto = {
-    "00": (0.707 + 0j),  # Amplitud compleja del estado |00⟩ (ejemplo)
-    "01": (0.0 + 0.0j),
-    "10": (0.0 + 0.0j),
-    "11": (0.707 + 0j)   # Amplitud compleja del estado |11⟩ (ejemplo)
-}
-
-variable_estado = estado_superpuesto
-
+"""
 Archivo Unificado: Sistema Híbrido Cuántico-Bayesiano con Representación de Momentum en Superposición
 
 Este archivo combina:
@@ -32,8 +22,18 @@ from scipy.fft import fft, ifft
 
 # Importar clases del sistema híbrido y del módulo de circuitos cuánticos.
 from quantum_hybrid_system import QuantumBayesianHybridSystem
-from quantum_fourier_network import ResilientQuantumCircuit
+from quantum_fourier_transform import QuantumFourierTransform
+from resilient_quantum_circuit import ResilientQuantumCircuit
 
+# lógica del:
+estado_superpuesto = {
+    "00": (0.707 + 0j),  # Amplitud compleja del estado |00⟩ (ejemplo)
+    "01": (0.0 + 0.0j),
+    "10": (0.0 + 0.0j),
+    "11": (0.707 + 0j)   # Amplitud compleja del estado |11⟩ (ejemplo)
+}
+
+variable_estado = estado_superpuesto
 class QuantumMomentumRepresentation:
     """
     Clase para representar y manipular el momentum cuántico en estados de superposición.
