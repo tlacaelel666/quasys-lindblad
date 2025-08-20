@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio FFT a Circuito Cuántico</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 100%);
+            color: #00ff41;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid #00ff41;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 65, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #00ff41;
+            text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+            margin-bottom: 30px;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #003d00, #00ff41);
+            border: none;
+            color: black;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 2px 10px rgba(0, 255, 65, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(0, 255, 65, 0.5);
+        }
+        
+        button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .visualization {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .panel {
+            background: rgba(0, 50, 0, 0.3);
+            border: 1px solid #00ff41;
+            border-radius: 8px;
+            padding: 15px;
+        }
+        
+        .panel h3 {
+            margin-top: 0;
+            color: #00ff41;
+            text-align: center;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 200px;
+            border: 1px solid #00ff41;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .quantum-state {
+            grid-column: 1 / -1;
+            background: rgba(0, 20, 50, 0.3);
+            border: 1px solid #0099ff;
+        }
+        
+        .quantum-state h3 {
+            color: #0099ff;
+        }
+        
+        .qubits-display {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .qubit {
+            background: rgba(0, 150, 255, 0.2);
+            border: 1px solid #0099ff;
+            border-radius: 5px;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .qubit-label {
+            font-size: 12px;
+            color: #0099ff;
+            margin-bottom: 5px;
+        }
+        
+        .qubit-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+        
+        .state-vector {
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #0099ff;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+        
+        .frequency-data {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 5px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-size: 12px;
+        }
+        
+        .freq-item {
+            background: rgba(0, 255, 65, 0.1);
+            border: 1px solid rgba(0, 255, 65, 0.3);
+            border-radius: 3px;
+            padding: 3px;
+            text-align: center;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            background: rgba(255, 255, 0, 0.1);
+            border: 1px solid #ffff00;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            color: #ffff00;
+        }
+        
+        @media (max-width: 768px) {
+            .visualization {
+                grid-template-columns: 1fr;
+            }
+            
+            .qubits-display {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Audio FFT → Circuito Cuántico 🔬</h1>
+        
+        <div class="status" id="status">
+            🎙️ Presiona "Iniciar" para comenzar la captura de audio<br>
+            <small>Necesitarás permitir el acceso al micrófono cuando se solicite</small>
+        </div>
+        
+        <div class="controls">
+            <button id="startBtn">▶️ Iniciar Captura</button>
+            <button id="stopBtn" disabled>⏹️ Detener</button>
+            <button id="resetBtn">🔄 Reset</button>
+        </div>
+        
+        <div class="visualization">
+            <div class="panel">
+                <h3>📊 Espectro de Frecuencias</h3>
+                <canvas id="frequencyCanvas"></canvas>
+                <div class="frequency-data" id="frequencyData"></div>
+            </div>
+            
+            <div class="panel">
+                <h3>🌊 Forma de Onda</h3>
+                <canvas id="waveformCanvas"></canvas>
+            </div>
+            
+            <div class="panel quantum-state">
+                <h3>⚛️ Estado del Circuito Cuántico (5 Qubits)</h3>
+                
+                <div class="qubits-display">
+                    <div class="qubit">
+                        <div class="qubit-label">Q0</div>
+                        <div class="qubit-value" id="q0">|0⟩</div>
+                    </div>
+                    <div class="qubit">
+                        <div class="qubit-label">Q1</div>
+                        <div class="qubit-value" id="q1">|0⟩</div>
+                    </div>
+                    <div class="qubit">
+                        <div class="qubit-label">Q2</div>
+                        <div class="qubit-value" id="q2">|0⟩</div>
+                    </div>
+                    <div class="qubit">
+                        <div class="qubit-label">Q3</div>
+                        <div class="qubit-value" id="q3">|0⟩</div>
+                    </div>
+                    <div class="qubit">
+                        <div class="qubit-label">Q4</div>
+                        <div class="qubit-value" id="q4">|0⟩</div>
+                    </div>
+                </div>
+                
+                <h4>Vector de Estado (32 componentes más significativas):</h4>
+                <div class="state-vector" id="stateVector"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class AudioQuantumProcessor {
+            constructor() {
+                // Variables de inicialización
+                this.audioContext = null;
+                this.microphone = null;
+                this.analyser = null;
+                this.dataArray = null;
+                this.timeDomainArray = null;
+                this.mediaStream = null;
+                this.isRecording = false;
+                this.animationId = null;
+                
+                // Canvas elements
+                this.frequencyCanvas = document.getElementById('frequencyCanvas');
+                this.waveformCanvas = document.getElementById('waveformCanvas');
+                this.freqCtx = this.frequencyCanvas.getContext('2d');
+                this.waveCtx = this.waveformCanvas.getContext('2d');
+                
+                // UI elements
+                this.startBtn = document.getElementById('startBtn');
+                this.stopBtn = document.getElementById('stopBtn');
+                this.resetBtn = document.getElementById('resetBtn');
+                this.status = document.getElementById('status');
+                
+                this.setupCanvas();
+                this.bindEvents();
+                
+                // Quantum state
+                this.quantumState = new Array(32).fill(0);
+                this.qubits = [0, 0, 0, 0, 0];
+            }
+            
+            setupCanvas() {
+                // Setup canvas dimensions
+                [this.frequencyCanvas, this.waveformCanvas].forEach(canvas => {
+                    canvas.width = canvas.offsetWidth;
+                    canvas.height = canvas.offsetHeight;
+                });
+            }
+            
+            bindEvents() {
+                this.startBtn.addEventListener('click', () => this.startRecording());
+                this.stopBtn.addEventListener('click', () => this.stopRecording());
+                this.resetBtn.addEventListener('click', () => this.reset());
+                
+                window.addEventListener('resize', () => this.setupCanvas());
+            }
+            
+            async checkMicrophonePermissions() {
+                try {
+                    // Verificar si los permisos están disponibles
+                    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                        throw new Error('Tu navegador no soporta acceso al micrófono');
+                    }
+                    
+                    // Verificar estado de permisos si está disponible
+                    if (navigator.permissions) {
+                        const permission = await navigator.permissions.query({ name: 'microphone' });
+                        console.log('Estado del permiso del micrófono:', permission.state);
+                        
+                        if (permission.state === 'denied') {
+                            throw new Error('Permiso de micrófono denegado. Por favor, habilítalo en la configuración del navegador.');
+                        }
+                    }
+                    
+                    return true;
+                } catch (error) {
+                    console.error('Error verificando permisos:', error);
+                    throw error;
+                }
+            }
+
+            async startRecording() {
+                try {
+                    this.status.textContent = 'Verificando permisos del micrófono...';
+                    
+                    // Verificar permisos primero
+                    await this.checkMicrophonePermissions();
+                    
+                    this.status.textContent = 'Solicitando acceso al micrófono...';
+                    this.status.style.color = '#ffff00';
+                    
+                    // Configuración más específica para mejor compatibilidad
+                    const constraints = {
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true,
+                            sampleRate: 44100
+                        }
+                    };
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    
+                    // Crear contexto de audio
+                    this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Reanudar contexto si está suspendido
+                    if (this.audioContext.state === 'suspended') {
+                        await this.audioContext.resume();
+                    }
+                    
+                    this.microphone = this.audioContext.createMediaStreamSource(stream);
+                    this.analyser = this.audioContext.createAnalyser();
+                    
+                    // Configuración del analizador
+                    this.analyser.fftSize = 2048;
+                    this.analyser.smoothingTimeConstant = 0.8;
+                    this.analyser.minDecibels = -90;
+                    this.analyser.maxDecibels = -10;
+                    
+                    const bufferLength = this.analyser.frequencyBinCount;
+                    this.dataArray = new Uint8Array(bufferLength);
+                    this.timeDomainArray = new Uint8Array(bufferLength);
+                    
+                    this.microphone.connect(this.analyser);
+                    
+                    // Guardar referencia al stream para poder cerrarlo después
+                    this.mediaStream = stream;
+                    
+                    this.isRecording = true;
+                    this.startBtn.disabled = true;
+                    this.stopBtn.disabled = false;
+                    
+                    this.status.textContent = '✅ Capturando audio y procesando FFT...';
+                    this.status.style.color = '#00ff41';
+                    
+                    this.animate();
+                    
+                } catch (error) {
+                    console.error('Error accediendo al micrófono:', error);
+                    
+                    let errorMessage = 'Error: ';
+                    
+                    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                        errorMessage += 'Permiso de micrófono denegado. Por favor:';
+                        this.status.innerHTML = `${errorMessage}<br>
+                            1. Haz clic en el ícono del candado/micrófono en la barra de direcciones<br>
+                            2. Selecciona "Permitir" para el micrófono<br>
+                            3. Recarga la página e intenta de nuevo`;
+                    } else if (error.name === 'NotFoundError') {
+                        errorMessage += 'No se encontró micrófono. Conecta un micrófono y recarga la página.';
+                    } else if (error.name === 'NotSupportedError') {
+                        errorMessage += 'Tu navegador no soporta acceso al micrófono.';
+                    } else {
+                        errorMessage += error.message || 'No se pudo acceder al micrófono';
+                    }
+                    
+                    this.status.innerHTML = errorMessage;
+                    this.status.style.color = '#ff4444';
+                    
+                    this.startBtn.disabled = false;
+                }
+            }
+            
+            stopRecording() {
+                this.isRecording = false;
+                
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+                
+                // Detener todas las pistas del stream de medios
+                if (this.mediaStream) {
+                    this.mediaStream.getTracks().forEach(track => track.stop());
+                    this.mediaStream = null;
+                }
+                
+                if (this.audioContext && this.audioContext.state !== 'closed') {
+                    this.audioContext.close();
+                }
+                
+                this.startBtn.disabled = false;
+                this.stopBtn.disabled = true;
+                
+                this.status.textContent = '⏹️ Grabación detenida';
+                this.status.style.color = '#ffff00';
+            }
+            
+            reset() {
+                this.stopRecording();
+                
+                // Clear canvases
+                this.freqCtx.clearRect(0, 0, this.frequencyCanvas.width, this.frequencyCanvas.height);
+                this.waveCtx.clearRect(0, 0, this.waveformCanvas.width, this.waveformCanvas.height);
+                
+                // Reset quantum state
+                this.quantumState.fill(0);
+                this.qubits.fill(0);
+                this.updateQuantumDisplay();
+                
+                document.getElementById('frequencyData').innerHTML = '';
+                document.getElementById('stateVector').innerHTML = '';
+                
+                this.status.textContent = '🔄 Sistema reiniciado - Presiona "Iniciar" para comenzar';
+                this.status.style.color = '#00ff41';
+            }
+            
+            animate() {
+                if (!this.isRecording) return;
+                
+                this.animationId = requestAnimationFrame(() => this.animate());
+                
+                // Obtener datos de frecuencia y tiempo
+                this.analyser.getByteFrequencyData(this.dataArray);
+                this.analyser.getByteTimeDomainData(this.timeDomainArray);
+                
+                this.drawFrequencySpectrum();
+                this.drawWaveform();
+                this.processQuantumState();
+            }
+            
+            drawFrequencySpectrum() {
+                const canvas = this.frequencyCanvas;
+                const ctx = this.freqCtx;
+                const width = canvas.width;
+                const height = canvas.height;
+                
+                ctx.clearRect(0, 0, width, height);
+                
+                // Gradiente de fondo
+                const gradient = ctx.createLinearGradient(0, 0, 0, height);
+                gradient.addColorStop(0, 'rgba(0, 255, 65, 0.8)');
+                gradient.addColorStop(1, 'rgba(0, 255, 65, 0.1)');
+                
+                const barWidth = width / this.dataArray.length;
+                let x = 0;
+                
+                for (let i = 0; i < this.dataArray.length; i++) {
+                    const barHeight = (this.dataArray[i] / 255) * height;
+                    
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(x, height - barHeight, barWidth, barHeight);
+                    
+                    x += barWidth;
+                }
+            }
+            
+            drawWaveform() {
+                const canvas = this.waveformCanvas;
+                const ctx = this.waveCtx;
+                const width = canvas.width;
+                const height = canvas.height;
+                
+                ctx.clearRect(0, 0, width, height);
+                
+                ctx.strokeStyle = '#00ff41';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                
+                const sliceWidth = width / this.timeDomainArray.length;
+                let x = 0;
+                
+                for (let i = 0; i < this.timeDomainArray.length; i++) {
+                    const v = this.timeDomainArray[i] / 128.0;
+                    const y = v * height / 2;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                    
+                    x += sliceWidth;
+                }
+                
+                ctx.stroke();
+            }
+            
+            processQuantumState() {
+                // Encontrar las 32 frecuencias más prominentes
+                const frequencyData = Array.from(this.dataArray);
+                const indexedData = frequencyData.map((value, index) => ({ value, index }));
+                
+                // Ordenar por magnitud descendente y tomar las 32 más grandes
+                indexedData.sort((a, b) => b.value - a.value);
+                const top32 = indexedData.slice(0, 32);
+                
+                // Normalizar valores para crear el vector de estado cuántico
+                const maxValue = Math.max(...top32.map(item => item.value));
+                this.quantumState = top32.map(item => item.value / maxValue);
+                
+                // Mapear a qubits (usando los primeros 5 componentes principales)
+                for (let i = 0; i < 5; i++) {
+                    // Convertir amplitud normalizada a ángulo para rotación cuántica
+                    const amplitude = this.quantumState[i] || 0;
+                    this.qubits[i] = amplitude > 0.5 ? 1 : 0; // Simplificado: |0⟩ o |1⟩
+                }
+                
+                this.updateQuantumDisplay();
+                this.updateFrequencyDisplay(top32);
+            }
+            
+            updateQuantumDisplay() {
+                // Actualizar visualización de qubits
+                for (let i = 0; i < 5; i++) {
+                    const qubitElement = document.getElementById(`q${i}`);
+                    const state = this.qubits[i];
+                    qubitElement.textContent = `|${state}⟩`;
+                    
+                    // Agregar color basado en el estado
+                    qubitElement.style.color = state === 1 ? '#ff4444' : '#44ff44';
+                }
+                
+                // Actualizar vector de estado
+                const stateVector = document.getElementById('stateVector');
+                const vectorDisplay = this.quantumState.map((amplitude, index) => 
+                    `[${index.toString().padStart(2, '0')}]: ${amplitude.toFixed(4)}`
+                ).join('\n');
+                stateVector.textContent = vectorDisplay;
+            }
+            
+            updateFrequencyDisplay(top32) {
+                const frequencyData = document.getElementById('frequencyData');
+                frequencyData.innerHTML = '';
+                
+                top32.slice(0, 16).forEach((item, index) => {
+                    const freqElement = document.createElement('div');
+                    freqElement.className = 'freq-item';
+                    
+                    // Calcular frecuencia aproximada
+                    const frequency = (item.index * this.audioContext.sampleRate) / (2 * this.analyser.fftSize);
+                    
+                    freqElement.innerHTML = `
+                        <div>${frequency.toFixed(0)} Hz</div>
+                        <div>${item.value}</div>
+                    `;
+                    
+                    frequencyData.appendChild(freqElement);
+                });
+            }
+        }
+        
+        // Inicializar la aplicación
+        document.addEventListener('DOMContentLoaded', () => {
+            const processor = new AudioQuantumProcessor();
+        });
+    </script>
+</body>
+</html>
