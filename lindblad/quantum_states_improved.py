@@ -319,7 +319,9 @@ class QuantumEntanglement:
         else:
             # Para más qubits, usar entropía de entrelazamiento
             entropy = QuantumEntanglement.entanglement_entropy(state, [0])
-            return entropy > toleranceclass QuantumStateManager:import numpy as np
+            return entropy > toleranceclass == QuantumStateManager
+
+import numpy as np
 import sympy as sp
 from typing import List, Tuple, Union, Optional, Dict, Any
 from dataclasses import dataclass, field

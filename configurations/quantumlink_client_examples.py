@@ -22,9 +22,10 @@ class QuantumLinkClient:
                 'Authorization': f'Bearer {auth_token  }'
             })
 # 3. Decodificar un mensaje
-"curl -X POST'http://localhost:5000/api/v1/decode' \
-  "-H content-Type: application/json" \
-  "-H Authorization: Bearer valid_user123" \
+"""
+curl -X POST'http://localhost:5000/api/v1/decode' \\
+  -H "content Type: application/json" \
+  -H "Authorization: Bearer valid_user123" \
   -d",
      
     "package_id": "BiMO-12345678",
@@ -348,8 +349,7 @@ if __name__ == "__main__":
     print("- Consulta la documentación de la API para más detalles")
     print("- Usa los ejemplos JavaScript para integración frontend")
     print("- Los comandos curl están listos para pruebas manuales"),
-                'Content-Type': 'application/json'
-            })
+    "Content-Type: 'application/json'"            
     
     def _make_request(self, method: str, endpoint: str, data: Dict = None) -> Dict[str, Any]:
         """Realizar una petición HTTP"""
@@ -579,8 +579,8 @@ async function ejemploFrontend() {
 """
 
 # ==================== EJEMPLOS CURL ====================
-
-curl_examples = """
+"""
+curl_examples = 
 # Ejemplos de comandos curl para probar la API
 
 # 1. Verificar estado de la API
@@ -596,4 +596,4 @@ curl -X POST http://localhost:5000/api/v1/encode \\
       "encoding_type": "BiMO",
       "priority": "high"
     }
-  
+  """
