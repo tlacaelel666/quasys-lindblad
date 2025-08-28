@@ -941,5 +941,75 @@ def main():
     prob_zero = dj_result.probability(0)
     print(f"   P(|0⟩) = {prob_zero:.3f} → función {'constante' if prob_zero > 0.9 else 'balanceada'}")
 
+class QuantumLindbladSimulator:
+    """Clase para simular dinámicas abiertas con ecuación maestra de Lindblad"""
+    def __init__(self, n_qubits: int, omega: float = 1.0, gamma: float = 0.01, error_type: str = 'amplitude_damping'):
+        self.n_qubits = n_qubits
+        self.omega = omega
+        self.gamma = gamma
+        self.error_type = error_type
+        # Operadores de segunda cuantización (por qubit)
+        self.a = np.array([[0, 1], [0, 0]], dtype=complex)  # Aniquilación
+        self.adag = self.a.conj().T                        # Creación
+        self.n = self.adag @ self.a                        # Número
+        self.H = omega * self.n                            # Hamiltoniano H = ω n
+
+    def generate_lindblad_operators(self) -> List[np.ndarray]:
+        """Genera operadores de Lindblad para el tipo de error"""
+        if self.error_type == 'amplitude_damping':
+            return [np.sqrt(self.gamma) * self.a]
+        elif self.error_type == 'bit_flip':
+            return [np.sqrt(self.gamma) * QuantumGates.pauli_x()]
+        return []
+
+    def lindblad_step(self, rho: np.ndarray, dt: float) -> np.ndarray:
+        """Aplica un paso de la ecuación de Lindblad"""
+        # Término coherente: -i [H, ρ]
+        commutator = -1j * (self.H @ rho - rho @ self.H)
+        # Término disipativo
+        dissipation = np.zeros_like(rho)
+        for L in self.generate_lindblad_operators():
+            Ldag = L.conj().T
+            dissipation += L @ rho @ Ldag - 0.5 * (Ldag @ L @ rho + rho @ Ldag @ L)
+        return rho + dt * (commutator + dissipation)
+
+    def simulate(self, state: QuantumState, t_span: Tuple[float, float], steps: int = 100) -> dict:
+        """Simula evolución Lindblad"""
+        tlist = np.linspace(t_span[0], t_span[1], steps)
+        rho = np.outer(state.amplitudes, state.amplitudes.conj())
+        results = {'times': tlist, 'states': [rho], 'fidelities': [1.0], 'parities': []}
+        rho0 = rho.copy()
+        parity_op = expm(1j * np.pi * self.n)
+        
+        dt = (t_span[1] - t_span[0]) / steps
+        for _ in range(steps):
+            rho = self.lindblad_step(rho, dt)
+            # Renormalizar
+            trace = np.trace(rho)
+            if abs(trace) > 1e-10:
+                rho /= trace
+            fidelity = np.abs(np.trace(rho0 @ rho))**2
+            parity = np.abs(np.trace(parity_op @ rho))
+            results['states'].append(rho)
+            results['fidelities'].append(fidelity)
+            results['parities'].append(parity)
+        
+        return results
+
+    def plot_results(self, results: dict):
+        """Visualiza resultados de la simulación"""
+        try:
+            plt.figure(figsize=(10, 6))
+            plt.plot(results['times'], results['fidelities'], label='Fidelidad')
+            plt.plot(results['times'], results['parities'], label='Paridad')
+            plt.xlabel('Tiempo'); plt.ylabel('Valor'); plt.legend()
+            plt.title('Evolución Lindblad')
+            plt.grid(True, alpha=0.3)
+            plt.show()
+        except ImportError:
+            print("Matplotlib no disponible.")
+            for t, f, p in zip(results['times'], results['fidelities'], results['parities']):
+                print(f"t={t:.2f}: Fidelidad={f:.3f}, Paridad={p:.3f}")
+
 if __name__ == "__main__":
     main()
